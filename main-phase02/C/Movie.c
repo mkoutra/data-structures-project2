@@ -325,6 +325,218 @@ int UserHashTableInsert(int user_id) {
 }
 
 /*
+ * Scan all rows of hash table to find the user with user id uid.
+ * Returns a pointer to that user, or NULL if no such a user exists.
+*/
+user_t* FindUser(int uid) {
+    int i = 0;
+    user_t* chain;
+    user_t* user_found = NULL;
+
+    // for (i = 0; i < hashtable_size; ++i) {
+    //     chain = user_hashtable_p[i];
+    //     user_found = ChainLookUpUser(chain, uid);
+
+    //     if (user_found != NULL) return user_found;
+    // }
+
+    while((user_found == NULL) && (i < hashtable_size)) {
+        chain = user_hashtable_p[i++];
+        user_found = ChainLookUpUser(chain, uid);
+    }
+
+    return user_found;
+}
+
+/*
+ ******************************************************************************
+ *********************** DOUBLY-LINKED LEAF-ORIENTED BST  *********************
+ ******************************************************************************
+*/
+
+/* Check if a node is leaf. */
+int IsLeaf(userMovie_t* v) {
+    return ((v->lc == NULL) && (v->rc == NULL));
+}
+
+/* Insert a node in a doubly linked leaf-oriented BST */
+void InsertHistoryLeaf(userMovie_t** root, int movie_id, int cat, int rating) {
+    userMovie_t* tmp = (*root);
+    userMovie_t* prev = NULL;
+
+    /* Node containing the info of the new node*/
+    userMovie_t* new_watched_film = (userMovie_t*)malloc(sizeof(userMovie_t));
+    new_watched_film->movieID = movie_id;
+    new_watched_film->category = cat;
+    new_watched_film->score = rating;
+    new_watched_film->parent = NULL;
+    new_watched_film->lc = NULL;
+    new_watched_film->rc = NULL;
+
+    /* Initially Empty tree */
+    if (*root == NULL) {
+        (*root) = new_watched_film;
+        return;
+    }
+
+    /* Find v' */
+    while (tmp != NULL) {
+        prev = tmp;
+
+        if (movie_id < tmp->movieID) {
+            tmp = tmp->lc;
+        }
+        else if (movie_id > tmp->movieID) {
+            tmp = tmp-> rc;
+        }
+        else if (movie_id == tmp->movieID) {
+            if (IsLeaf(tmp)) {
+                /* Key already inside a leaf */
+                fprintf(stderr, "Key already inside the tree.\n");
+                return;
+            }
+            else {
+                tmp = tmp->rc;
+            }
+        }
+    }
+
+    /* Create the 3-node tree */
+    userMovie_t* q = (userMovie_t*)malloc(sizeof(userMovie_t));
+    /* Copy prev to q */
+    q->movieID = prev->movieID;
+    q->category = prev->category;
+    q->score = prev->score;
+    q->lc = NULL;
+    q->rc = NULL;
+
+    /* Prev does not change position.*/
+    new_watched_film->parent = prev;
+    q->parent = prev;
+
+    /*
+     * Here both q and new_watched_film have prev as their parent.
+     * But we have not specified yet who is the left and right 
+     * child of prev.
+    */
+
+    /* Set prev's fields to invalid values. (Not necessary) */
+    prev->category = -1;
+    prev->score = -1;
+
+    /*prev's key does need to change.*/
+    if (movie_id < prev->movieID) {
+        prev->lc = new_watched_film;
+        prev->rc = q;
+    }
+    /*prev's key must change to movie_id (largest)*/
+    else { /* movie_id >= prev->movieID */
+        prev->rc = new_watched_film;
+        prev->lc = q;
+        prev->movieID = movie_id;
+    }
+}
+
+/* Returns the leftmost node of a BST with root x. */
+userMovie_t* LeftMost(userMovie_t* x) {
+    if (x == NULL) return NULL;
+    
+    if (x->lc == NULL) return x;
+    
+    while(x->lc != NULL) x = x->lc;
+    
+    return x;
+}
+
+/*
+ * Given a leaf v of a doubly-linked leaf-oriented BST with root root,
+ * Returns a pointer to the successor leaf in in-order traversal.
+*/
+userMovie_t* Successor(userMovie_t* v, userMovie_t* root) {
+    userMovie_t* tmp = v;
+    userMovie_t* prev = NULL;
+
+    if (tmp == NULL) return NULL;
+
+    if (tmp == root) return NULL;   /* v is the root of single node tree */
+
+    if (tmp == tmp->parent->lc) {   /* v is left child */
+        /* Leftmost node of uncle. */
+        return LeftMost(tmp->parent->rc);
+    }
+    else {                          /* v is right child */
+        userMovie_t* y = tmp->parent;
+        
+        while (y != NULL && tmp == y->rc) {
+            tmp = y;
+            y = y->parent;
+        }
+        if (y == NULL) return NULL; /* No successor found */
+        return LeftMost(y->rc);
+    }
+}
+
+/*
+ * Deallocate all nodes of the watch history 
+ * leaf-oriented BST using post order traversal.
+*/
+void DeleteWatchHistoryTree(userMovie_t* root) {
+    if (root == NULL) return ;
+    DeleteWatchHistoryTree(root->lc);
+    DeleteWatchHistoryTree(root->rc);
+    free(root);
+}
+
+/*
+ * Print the leaves of a leaf-oriented BST with root root.
+ * in InOrder traversal (sorted).*/
+void PrintHistoryLeavesInOrder(userMovie_t* root) {
+    userMovie_t* lleft = LeftMost(root); /* Leftmost leaf */
+    while(lleft != NULL) {
+        printf("       <%d, %d>\n", lleft->movieID, lleft->score);
+        lleft = Successor(lleft, root);
+    }
+}
+
+/*
+ ******************************************************************************
+ ******************************* WATCH FUNCTION *******************************
+ ******************************************************************************
+*/
+
+/*
+ * Returns the pointer to the movie with movie_id in category category.
+ * If not such a movie exists, returns NULL.
+*/
+movie_t* FindMovie(int movie_id, int category) {
+    if (category >= 6 || category < 0) {
+        fprintf(stderr, "Invalid category given to search_movie()\n");
+        return NULL;
+    }
+    movie_t* tmp = categoryArray[category]->movie;
+    movie_t* sent_node = categoryArray[category]->sentinel;
+
+    /* Place the movieID given to the guard node*/
+    sent_node->movieID = movie_id;
+    
+    while(tmp->movieID != movie_id) {
+        (movie_id < tmp->movieID) ? (tmp = tmp->lc) : (tmp = tmp->rc);
+    }
+
+    /* Restore sentinel movieID */
+    sent_node->movieID = -1;
+
+    if (tmp != sent_node) {
+        return tmp;
+    }
+    else {
+        fprintf(stderr, "Movie <%d> was not found in category <%d>.\n",
+                        movie_id, category);
+        return NULL;
+    }
+}
+
+/*
  ******************************************************************************
  ******************************* EVENT FUNCTIONS ******************************
  ******************************************************************************
@@ -479,8 +691,39 @@ int UserHashTableInsert(int user_id) {
  *         0 on failure
  */
 
- int watch_movie(int userID,int category, int movieID, int score){
-	 return 1;
+ int watch_movie(int userID, int category, int movieID, int score){
+    user_t* user_node;
+    movie_t* movie_node;
+
+    /* Find user */
+    user_node = FindUser(userID);
+    if (user_node == NULL) {
+        fprintf(stderr, "User not found, watch_movie()\n");
+        return 0;
+    }
+
+    /* Find movie in category array*/
+    movie_node = FindMovie(movieID, category);
+    if (movie_node == NULL) {
+        fprintf(stderr, "Movie %d of cat %d not found, watch_movie()\n",
+                movieID, category);
+        return 0;
+    }
+
+    /* Update movie node */
+    movie_node->watchedCounter++;
+    movie_node->sumScore += score;
+
+    /* Place Movie in user's watch history */
+    InsertHistoryLeaf(&(user_node->history), movieID, category, score);
+
+    /* Prints */
+    printf("W <%d> <%d> <%d> <%d>\n", userID, category, movieID, score);
+    printf("History Tree of user <%d>:\n", userID);
+    PrintHistoryLeavesInOrder(user_node->history);
+    printf("DONE\n");
+
+    return 1;
  }
  
 /**
@@ -559,7 +802,6 @@ int UserHashTableInsert(int user_id) {
 
  int print_movies(void){
     int i = 0;
-    /* Printing */
     printf("M\nMovie Category Array:\n");
     for (i = 0; i < 6; ++i) {
         printf("    <Category %d>: ", i);
@@ -587,8 +829,11 @@ int UserHashTableInsert(int user_id) {
         while (tmp != NULL) {
             printf("      <%d>\n", tmp->userID);
             printf("      History Tree:\n");
+            
             /*print history tree*/
-            if (tmp->history == NULL) printf("          NULL\n");
+            if (tmp->history == NULL) printf("          Empty\n");
+            else PrintHistoryLeavesInOrder(tmp->history);
+
             tmp = tmp->next;
         }
     }

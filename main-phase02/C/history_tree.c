@@ -14,7 +14,7 @@ int IsLeaf(userMovie_t* v) {
 }
 
 /* Insert a node in a doubly linked leaf-oriented BST */
-void InsertLeaf(userMovie_t** root, int movie_id, int cat, int rating) {
+void InsertHistoryLeaf(userMovie_t** root, int movie_id, int cat, int rating) {
     userMovie_t* tmp = (*root);
     userMovie_t* prev = NULL;
 
@@ -68,9 +68,11 @@ void InsertLeaf(userMovie_t** root, int movie_id, int cat, int rating) {
     new_watched_film->parent = prev;
     q->parent = prev;
 
-    /* Here both q and new_watched_film have prev as their parent.
+    /*
+     * Here both q and new_watched_film have prev as their parent.
      * But we have not specified yet who is the left and right 
-     * child of prev.*/
+     * child of prev.
+    */
 
     /* Set prev's fields to invalid values. (Not necessary) */
     prev->category = -1;
@@ -221,7 +223,7 @@ int main(void) {
     int n = 6;
 
     for (int i = 0; i < 2; ++i) {
-        InsertLeaf(&root, mids[i], cats[i], scores[i]);
+        InsertHistoryLeaf(&root, mids[i], cats[i], scores[i]);
     }
 
     printf("In Order: ");
