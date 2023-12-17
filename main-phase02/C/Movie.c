@@ -5,6 +5,14 @@
  * @brief Implementation for Movie.h 				 *
  * Project: Winter 2023						         *
  *****************************************************/
+
+/*
+ * CS-240 - Fall 2023 - Project 2
+ * Michalis Koutrakis
+ * csdp1338 (Master's student)
+ * 18/12/2023
+*/
+
 #include "Movie.h"
 
 /*
@@ -562,6 +570,59 @@ movie_t* FindMovie(int movie_id, int category) {
 
 /*
  ******************************************************************************
+ ********************************** FILTERING *********************************
+ ******************************************************************************
+*/
+
+/*
+ * Scans a category tree with root root and returns the number 
+ * of nodes with average value greater than the score given.
+ * In Order traversal.
+*/
+int NodesAboveScore(movie_t* root, int score) {
+    int s = 0;
+    float av = 0.0;
+    if (root == guard) return 0;
+    
+    s += NodesAboveScore(root->lc, score);
+    
+    /* Find average value */
+    if (root->watchedCounter == 0) av = 0;
+    else av = (float) (root->sumScore) / (root->watchedCounter);
+    
+    if (av >= score) s++;
+    
+    s += NodesAboveScore(root->rc, score);
+    
+    return s;
+}
+
+/*
+ * Scans a category tree with root root and fills the filtering_array with
+ * pointers to nodes with average score >= to score given.
+ * - idx is used to traverse the filtering array.
+ * - In-order traversal.
+*/
+void FillFilteringArray(movie_t* root, movie_t* filtering_arr[], int* idx, int score) {
+    float av = 0.0;
+    if (root == guard) return ;
+    
+    FillFilteringArray(root->lc, filtering_arr, idx, score);
+    
+    /* Find average value */
+    if (root->watchedCounter == 0) av = 0;
+    else av = (float) (root->sumScore) / (root->watchedCounter);
+    
+    if (av >= score) {
+        filtering_arr[*idx] = root;
+        (*idx)++;
+    }
+
+    FillFilteringArray(root->rc, filtering_arr, idx, score);
+}
+
+/*
+ ******************************************************************************
  ******************************* EVENT FUNCTIONS ******************************
  ******************************************************************************
 */
@@ -767,7 +828,50 @@ movie_t* FindMovie(int movie_id, int category) {
  *         0 on failure
  */
  int filter_movies(int userID, int score){
-	 return 1;
+    int i = 0, idx = 0;
+	int numMovies = 0;        /* Movie counter */
+    movie_t** filtering_arr;  /* Array with node indices with av >= score */
+    float av = 0.0;           /* Average score */
+    movie_t* movie_node;
+
+    /* Count movies with average_score >= score */
+    for (i = 0; i < 6; ++i) {
+        numMovies += NodesAboveScore(categoryArray[i]->movie, score);
+    }
+
+    if (numMovies == 0) {
+        printf("There is no movie with averaging rating above %d\n", score);
+        return 1;
+    }
+
+    /* Allocate memory for the filtering array */
+    filtering_arr = (movie_t**) malloc(numMovies * sizeof(movie_t*));
+    if (filtering_arr == NULL) {
+        fprintf(stderr, "Malloc error, filter_movies()\n");
+        return 0;
+    }
+
+    /* Fill the filtering_arr using idx to traverse it*/
+    for (i = 0; i < 6; ++i) {
+        FillFilteringArray(categoryArray[i]->movie, filtering_arr, &idx, score);
+    }
+
+    /* TODO: Heapsort */
+    
+    /* Printing */
+    printf("F <%d> <%d>\n      ", userID, score);
+    for (i = 0; i < numMovies; ++i) {
+        movie_node = filtering_arr[i];
+        
+        /* Find average value */
+        if (movie_node->watchedCounter == 0) av = 0;
+        else av = (float) movie_node->sumScore / movie_node->watchedCounter;
+
+        printf("<%d> <%.2f> ", movie_node->movieID, av);
+    }
+    printf("\nDONE\n");
+
+    return 1;
  }
  
 /**

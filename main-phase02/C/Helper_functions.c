@@ -317,29 +317,74 @@ int print_movies(void) {
     return 1;
 }
 
+int NodesAboveScore(movie_t* root, int score) {
+    int s = 0;
+    float av = 0.0;
+    if (root == NULL) return 0;
+    
+    s += NodesAboveScore(root->lc, score);
+
+    av = (float) root->year / root->movieID;
+    if (av >= score) s++;
+    
+    s += NodesAboveScore(root->rc, score);
+    
+    return s;
+}
+
+void FillFilteringArray(movie_t* root, movie_t* filtering_arr[], int* idx, int score) {
+    float av = 0.0;
+    if (root == NULL) return ;
+    
+    FillFilteringArray(root->lc, filtering_arr, idx, score);
+
+    av = (float) root->year / root->movieID;
+    if (av >= score) {
+        filtering_arr[*idx] = root;
+        (*idx)++;
+    }
+
+    FillFilteringArray(root->rc, filtering_arr, idx, score);
+}
+
 /*
  ******************************************************************************
  ********************************** TESTING ***********************************
  ******************************************************************************
 */
-// int main(void) {
-//     int movie_ids[5] = {9, 15, 5, 17, 4};
-//     int movie_years[5] = {1900, 1920, 1950, 2000, 2023};
-//     int movie_cats[5] = {1, 3, 1, 3, 4};
+int main(void) {
+    int movie_ids[5] = {9, 15, 5, 17, 4};
+    int movie_years[5] = {1900, 1920, 1950, 2000, 2023};
+    int movie_cats[5] = {1, 1, 1, 1, 1};
 
-//     for (int i = 0; i < 5; ++i) {
-//         add_new_movie(movie_ids[i], movie_cats[i], movie_years[i]);
-//     }
+    for (int i = 0; i < 5; ++i) {
+        add_new_movie(movie_ids[i], movie_cats[i], movie_years[i]);
+    }
 
-//     InitializeCatArray();
-//     distribute_movies();
+    InitializeCatArray();
+    distribute_movies();
 
-//     search_movie(17, 3);
+    search_movie(17, 3);
 
-//     print_movies();
+    print_movies();
 
-//     return 0;
-// }
+    int n = NodesAboveScore(categoryArray[1]->movie, 200);
+    // int n = NodesAboveScore(NULL, 200);
+    printf("n = %d\n", n);
+    if (n > 0) {
+        //movie_t* filt_arr[n]; /* Assuming n > 0*/
+        movie_t** filt_arr = (movie_t**)malloc(2* n * sizeof(movie_t*));
+        int idx = 0;
+        FillFilteringArray(categoryArray[1]->movie, filt_arr, &idx, 200);
+        FillFilteringArray(categoryArray[1]->movie, filt_arr, &idx, 200);
+        printf("idx = %d\n", idx);
+        for (int i = 0; i < 2*n; ++i)
+            printf("%d, ", filt_arr[i]->movieID);
+        putchar('\n');
+    }
+
+    return 0;
+}
 
 /* Old tests */
 

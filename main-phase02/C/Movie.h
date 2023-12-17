@@ -54,7 +54,6 @@ typedef struct movie{
 /**
 * Structure defining movie_category
 */
-
 typedef struct movie_category{
 	movie_t *movie;
 	movie_t *sentinel;
