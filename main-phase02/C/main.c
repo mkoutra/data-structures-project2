@@ -25,9 +25,9 @@
 #define DPRINT(...)
 #endif /* DEBUG */
 
-int          hashtable_size; 	/** The size of the users hashtable (>0) */
-int max_users;         /** The maximum number of registrations (users) */
-int max_id;            /** The maximum user ID */
+int hashtable_size;	/** The size of the users hashtable (>0) */
+int max_users;      /** The maximum number of registrations (users) */
+int max_id;         /** The maximum user ID */
 
 // This is a very conservative progress on the hashtable. Our purpose
 // is to force many rehashes to check the stability of the code.
@@ -53,6 +53,12 @@ user_t **user_hashtable_p;	/* The users hashtable. This is an array of chains (p
 new_movie_t *new_releases;     /* New releases simply-linked binary tree*/
 movieCategory_t *categoryArray[6];  /* The categories array (pinakas kathgoriwn)*/
 
+/* My additions */
+movie_t* guard;				/* Global sentinel node */
+/* Global variables to be used in hash function */
+int hash_a;
+int hash_b;
+int hash_p;
 
 int main(int argc, char** argv)
 {
@@ -64,7 +70,13 @@ int main(int argc, char** argv)
 		fprintf(stderr, "Usage: %s <input_file> \n", argv[0]);
 		return EXIT_FAILURE;
 	}
-
+	
+	/*********************************************************/
+	/* Initialize new_releases and Category Array */
+	new_releases = NULL;
+	InitializeCatArray();
+	/*********************************************************/
+	
 	/* Open input file */
 	if (( fin = fopen(argv[1], "r") ) == NULL ) {
 		fprintf(stderr, "\n Could not open file: %s\n", argv[1]);
@@ -92,6 +104,10 @@ int main(int argc, char** argv)
 		case '1': {
 			sscanf(buff, "%c %u", &event, &max_id);
 			DPRINT("max id: %u\n", max_id);
+			/*********************************************************/
+			/* Initialize user's hash table */
+			UsersHashTableInit(2);
+			/*********************************************************/
 			break;
 		}		
 		/* Event R : R <userID> - Register user. */

@@ -172,7 +172,7 @@ void PreOrderCatTree(movie_t* root) {
 }
 
 /* Initialize Category array. Returns 0 on success, -1 on failure */
-int InitializeCatArray() {
+int InitializeCatArray(void) {
     /* Allocate global guard node */
     guard = (movie_t*)malloc(sizeof(movie_t));
     guard->movieID = -1;
@@ -314,6 +314,7 @@ int print_movies(void) {
         putchar('\n');
     }
     printf("DONE\n");
+    return 1;
 }
 
 /*

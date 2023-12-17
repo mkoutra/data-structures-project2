@@ -98,6 +98,11 @@ extern int hash_a;
 extern int hash_b;
 extern int hash_p;
 
+/* Initializers */
+int InitializeCatArray(void);
+int UsersHashTableInit(int load_f);
+
+
 /**
  * @brief Creates a new user.
  * Creates a new user with userID as its identification.
