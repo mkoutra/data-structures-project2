@@ -198,7 +198,7 @@ void PrintLeavesInOrder(userMovie_t* root) {
     }
 }
 
-/* Return the average rating of the watch istory tree given.*/
+/* Return the average rating of the watch history tree given.*/
 float AverageRating(userMovie_t* root) {
     float ScoreSum = 0;
     int counter = 0;

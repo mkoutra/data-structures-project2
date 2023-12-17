@@ -330,6 +330,7 @@ int UserHashTableInsert(int user_id) {
 */
 user_t* FindUser(int uid) {
     int i = 0;
+    int pos = 0;
     user_t* chain;
     user_t* user_found = NULL;
 
@@ -340,11 +341,14 @@ user_t* FindUser(int uid) {
     //     if (user_found != NULL) return user_found;
     // }
 
-    while((user_found == NULL) && (i < hashtable_size)) {
-        chain = user_hashtable_p[i++];
-        user_found = ChainLookUpUser(chain, uid);
-    }
+    // while((user_found == NULL) && (i < hashtable_size)) {
+    //     chain = user_hashtable_p[i++];
+    //     user_found = ChainLookUpUser(chain, uid);
+    // }
 
+    pos = HashFunc(uid, hash_a, hash_b, hash_p, hashtable_size);
+    user_found = ChainLookUpUser(user_hashtable_p[pos], uid);
+    
     return user_found;
 }
 
@@ -488,14 +492,34 @@ void DeleteWatchHistoryTree(userMovie_t* root) {
 }
 
 /*
- * Print the leaves of a leaf-oriented BST with root root.
- * in InOrder traversal (sorted).*/
-void PrintHistoryLeavesInOrder(userMovie_t* root) {
+ * Prints the leaves of a leaf-oriented BST with root root.
+ * in InOrder traversal (sorted).
+ * - Format specifies how the output will be printed
+ *   (W and P have different format outputs).*/
+void PrintHistoryLeavesInOrder(userMovie_t* root, char format) {
     userMovie_t* lleft = LeftMost(root); /* Leftmost leaf */
     while(lleft != NULL) {
-        printf("       <%d, %d>\n", lleft->movieID, lleft->score);
+        if (format == 'W')
+            printf("       <%d, %d>\n", lleft->movieID, lleft->score);
+        else /* Event P */
+            printf("       <%d> <%d>\n", lleft->movieID, lleft->score);
         lleft = Successor(lleft, root);
     }
+}
+
+/* Return the average rating of the watch history tree given.*/
+float MeanHistoryRating(userMovie_t* root) {
+    float ScoreSum = 0.;
+    int counter = 0;
+
+    userMovie_t* lleft = LeftMost(root); /* Leftmost leaf */
+    while(lleft != NULL) {
+        counter++;
+        ScoreSum += lleft->score;
+        lleft = Successor(lleft, root);
+    }
+
+    return (counter != 0) ? (ScoreSum / counter) : 0.0;
 }
 
 /*
@@ -551,7 +575,6 @@ movie_t* FindMovie(int movie_id, int category) {
  * @return 1 on success
  *         0 on failure
  */
-
  int register_user(int userID){
     int pos = HashFunc(userID, hash_a, hash_b, hash_p, hashtable_size);
     
@@ -577,13 +600,24 @@ movie_t* FindMovie(int movie_id, int category) {
  * @return 1 on success
  *         0 on failure
  */
-
  int unregister_user(int userID){
-    int pos = HashFunc(userID, hash_a, hash_b, hash_p, hashtable_size);
+    int pos, code;
+    user_t* user_node;
 
-    /* TODO: Delete the watch history tree */
+    /* Find User */
+    user_node = FindUser(userID);
+    if (user_node == NULL) {
+        fprintf(stderr, "User %d was not found, Unregister().\n", userID);
+        return 0;
+    }
 
-    int code = ChainDeleteUser(&user_hashtable_p[pos], userID);
+    /* Delete user's Watch History tree */
+    DeleteWatchHistoryTree(user_node->history);
+    user_node->history = NULL;
+
+    /* Remove user from his chain on the hash table */
+    pos = HashFunc(userID, hash_a, hash_b, hash_p, hashtable_size);
+    code = ChainDeleteUser(&user_hashtable_p[pos], userID);
     if (code == -1) {
         fprintf(stderr, "User <%d> does not exist.\n", userID);
         return 0;
@@ -607,7 +641,6 @@ movie_t* FindMovie(int movie_id, int category) {
  * @return 1 on success
  *         0 on failure
  */
-
  int add_new_movie(int movieID, int category, int year){
     int code = NewReleasesInsert(movieID, category, year);
     if (code == -1) return 0;
@@ -627,7 +660,6 @@ movie_t* FindMovie(int movie_id, int category) {
  * @return 0 on success
  *         1 on failure
  */
-
  int distribute_movies(void){
     /* Save the number of movies for each category */
     int mov_cat_counters[6] = {0, 0, 0, 0, 0, 0};
@@ -690,7 +722,6 @@ movie_t* FindMovie(int movie_id, int category) {
  * @return 1 on success
  *         0 on failure
  */
-
  int watch_movie(int userID, int category, int movieID, int score){
     user_t* user_node;
     movie_t* movie_node;
@@ -720,7 +751,7 @@ movie_t* FindMovie(int movie_id, int category) {
     /* Prints */
     printf("W <%d> <%d> <%d> <%d>\n", userID, category, movieID, score);
     printf("History Tree of user <%d>:\n", userID);
-    PrintHistoryLeavesInOrder(user_node->history);
+    PrintHistoryLeavesInOrder(user_node->history, 'W');
     printf("DONE\n");
 
     return 1;
@@ -735,7 +766,6 @@ movie_t* FindMovie(int movie_id, int category) {
  * @return 1 on success
  *         0 on failure
  */
-
  int filter_movies(int userID, int score){
 	 return 1;
  }
@@ -750,9 +780,23 @@ movie_t* FindMovie(int movie_id, int category) {
  * @return 1 on success
  *         0 on failure
  */
-
  int user_stats(int userID){
-	 return 1;
+	user_t* user_node = NULL;
+    float mean_score = 0.;
+
+    /* Find user */
+    user_node = FindUser(userID);
+    if (user_node == NULL) {
+        fprintf(stderr, "User %d was not found.\n", userID);
+        return 0;
+    }
+
+    /* Find mean score from user's watch history tree. */
+    mean_score = MeanHistoryRating(user_node->history);
+
+    /* Printing */
+    printf("Q <%d> <%.3f>\nDONE\n", userID, mean_score);
+    return 1;
  }
  
 /**
@@ -764,7 +808,6 @@ movie_t* FindMovie(int movie_id, int category) {
  * @return 1 on success
  *         0 on failure
  */
-
  int search_movie(int movieID, int category){
     if (category >= 6 || category < 0) {
         fprintf(stderr, "Invalid category given to search_movie()\n");
@@ -799,7 +842,6 @@ movie_t* FindMovie(int movie_id, int category) {
  * @return 1 on success
  *         0 on failure
  */
-
  int print_movies(void){
     int i = 0;
     printf("M\nMovie Category Array:\n");
@@ -811,13 +853,12 @@ movie_t* FindMovie(int movie_id, int category) {
     printf("DONE\n");
     return 1;
  }
- 
-  /**
+
+ /**
  * @brief Prints the users hashtable.
  * @return 1 on success
  *         0 on failure
  */
-
  int print_users(void){
     int i = 0;
     printf("P\n");
@@ -832,11 +873,12 @@ movie_t* FindMovie(int movie_id, int category) {
             
             /*print history tree*/
             if (tmp->history == NULL) printf("          Empty\n");
-            else PrintHistoryLeavesInOrder(tmp->history);
+            else PrintHistoryLeavesInOrder(tmp->history, 'P');
 
             tmp = tmp->next;
         }
     }
     printf("DONE\n");
+    return 1;
  }
  
