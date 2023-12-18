@@ -570,7 +570,7 @@ movie_t* FindMovie(int movie_id, int category) {
 
 /*
  ******************************************************************************
- ********************************** FILTERING *********************************
+ ***************************** FILTERING - HEAPSORT ***************************
  ******************************************************************************
 */
 
@@ -619,6 +619,60 @@ void FillFilteringArray(movie_t* root, movie_t* filtering_arr[], int* idx, int s
     }
 
     FillFilteringArray(root->rc, filtering_arr, idx, score);
+}
+
+/* Swap two movie_t pointers */
+void swap(movie_t** a, movie_t** b) {
+    movie_t* tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
+
+float AvScore(movie_t** filtering_array, int pos) {
+    float av = 0.;
+    if (filtering_array[pos]->watchedCounter == 0) av = 0.;
+    else av = (float) filtering_array[pos]->sumScore / filtering_array[pos]->watchedCounter;
+
+    return av;
+}
+
+/* Bring back the heap property to an array A[i..size-1]. */
+void Heapify(movie_t* A[], int i, int size) {
+    if (size <= 1) return ;
+    int m = size - 1;
+    int p;                      /* m's minimum child */
+
+    while ((2*m - size >= i) && (AvScore(A, 2*m - size) < AvScore(A, m)) ||       /* Smaller LC */
+           (2*m - size - 1 >= i) && (AvScore(A, 2*m - size - 1) < AvScore(A, m))) /* Smaller RC */
+        {
+            /* Has Both children */
+            if (2*m - size - 1 >= i) {
+                if (AvScore(A, 2*m - size) < AvScore(A, 2*m - size - 1))
+                    p = 2*m - size;
+                else
+                    p = 2*m - size - 1;
+            }
+            /* Has only Left child */
+            else p = i;
+            
+            swap(&A[m], &A[p]);
+            m = p;
+    }
+};
+
+/* Turn a table of length size into a min-heap, with the root at the end. */
+void InitializeHeap(movie_t* A[], int size) {
+    for (int i = 1; i < size; ++i) Heapify(A, 0, i + 1);
+}
+
+/* Heap Sort algorithm. O(nlog(n)) */
+void HeapSort(movie_t* A[], int size) {
+    InitializeHeap(A, size);        /* turn A into a heap */
+
+    for (int i = 0; i < size - 1; ++i){
+        swap(&A[i], &A[size - 1]);  /* Swap with the root */
+        Heapify(A, i + 1, size);    /* Fix heap property */
+    }
 }
 
 /*
@@ -857,7 +911,8 @@ void FillFilteringArray(movie_t* root, movie_t* filtering_arr[], int* idx, int s
     }
 
     /* TODO: Heapsort */
-    
+    HeapSort(filtering_arr, numMovies);
+
     /* Printing */
     printf("F <%d> <%d>\n      ", userID, score);
     for (i = 0; i < numMovies; ++i) {
