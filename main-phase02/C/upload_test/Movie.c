@@ -10,7 +10,7 @@
  * CS-240 - Fall 2023 - Project 2
  * Michalis Koutrakis
  * csdp1338 (Master's student)
- * 21/12/2023
+ * 18/12/2023
 */
 
 #include "Movie.h"
@@ -29,7 +29,7 @@ int NewReleasesInsert(int movieID, int category, int year) {
     new_movie_t* prev = NULL;
     new_movie_t* tmp = new_releases;
     
-    /* Scan the tree to find new node's parent. */
+    /* Search if movie is already inside the tree. */
     while (tmp != NULL) {
         if (movieID == tmp->movieID) {
             fprintf(stderr, "Movie %d is already inside\n", movieID);
@@ -43,10 +43,6 @@ int NewReleasesInsert(int movieID, int category, int year) {
 
     /* Create and initialize new film */
     new_movie_t* new_film = (new_movie_t*)malloc(sizeof(new_movie_t));
-    if (new_film == NULL) {
-        fprintf(stderr, "Malloc error, NewReleasesInsert()\n");
-        return -1;
-    }
     new_film->movieID = movieID;
     new_film->category =category;
     new_film->year = year;
@@ -89,7 +85,7 @@ void DeleteNewReleasesTree(new_movie_t* root) {
 */
 
 /*
- * Count the number of movies on each category of the tree given.
+ * Count the number of movies on each category of the new_releases tree.
  * Each element of array cat_counter represents the number of movies
  * for the corresponding category.
 */
@@ -103,7 +99,7 @@ void count_nodes(new_movie_t* root, int cat_counter[6]) {
 
 /*
  * Fill the array given (arr) with the pointers of new movie tree nodes.
- * The size of each row is the number of movies for this category.
+ * Each row's size == number of movies for this category.
  * Uses In-order traversal.
  * - arr is the array to fill. Contains arrays of pointers.
  * - idx contains the next position that a node should be
@@ -125,10 +121,10 @@ void fill_array(new_movie_t* root, new_movie_t*** arr, int idx[6]) {
 }
 
 /* 
- * Given an array of new_movie_t* pointers subArr[p..q],
- * creates a movie_t tree and returns its root.
- * Also, it deallocates the nodes from the new_releases tree.
- * Here subArr[p..q] is a row of the array filled with fill_array().
+ * Given an array of pointers to new_movie_t nodes subArr[p..q],
+ * creates a movie_tree and return its root. Also, deallocates the nodes
+ * from the new_releases tree.
+ * Here subArr[] is a row of the array filled with fill_array().
 */
 movie_t* arr_to_CategoryTree(new_movie_t* subArr[], int p, int q) {
     if (p > q) return guard;
@@ -138,10 +134,6 @@ movie_t* arr_to_CategoryTree(new_movie_t* subArr[], int p, int q) {
 
     /* New node */
     movie_t* new_node = (movie_t*)malloc(sizeof(movie_t));
-    if (new_node == NULL) {
-        fprintf(stderr, "Malloc error arr_to_CategoryTree()\n");
-        return NULL;
-    }
     new_node->movieID = subArr[mid]->movieID;
     new_node->year = subArr[mid]->year;
     new_node->watchedCounter = subArr[mid]->watchedCounter;
@@ -159,7 +151,7 @@ movie_t* arr_to_CategoryTree(new_movie_t* subArr[], int p, int q) {
     return new_node;
 }
 
-/* Print the category tree in In-order traversal. */
+/* Pre the category tree in In-order traversal */
 void InOrderCatTree(movie_t* root) {
     if (root == guard) return ;
     InOrderCatTree(root->lc);
@@ -167,22 +159,23 @@ void InOrderCatTree(movie_t* root) {
     InOrderCatTree(root->rc);
 }
 
+void PreOrderCatTree(movie_t* root) {
+    if (root == guard) return ;
+    printf("<%d>, ", root->movieID);
+    PreOrderCatTree(root->lc);
+    PreOrderCatTree(root->rc);
+}
+
 /* Initialize Category array. Returns 0 on success, -1 on failure */
 int InitializeCatArray(void) {
-    int i = 0;
-
     /* Allocate global guard node */
     guard = (movie_t*)malloc(sizeof(movie_t));
-    if (guard == NULL) {
-        fprintf(stderr, "Malloc error guard node.\n");
-        return -1;
-    }
     guard->movieID = -1;
     guard->year = guard->sumScore = guard->watchedCounter = 0;
     guard->lc = guard->rc = NULL;
 
-    /* Allocate memory for categoryArray */
-    for (i = 0; i < 6; ++i) {
+    /* Allocate memory for categoryArray*/
+    for (int i = 0; i < 6; ++i) {
         categoryArray[i] = (movieCategory_t*) malloc(sizeof(movieCategory_t));
         if (categoryArray[i] == NULL) {
             fprintf(stderr, "Malloc error InitializeCatArr\n");
@@ -191,16 +184,7 @@ int InitializeCatArray(void) {
         categoryArray[i]->movie = guard;
         categoryArray[i]->sentinel = guard;
     }
-
     return 0;
-}
-
-/* Deallocate the category tree with root root, Post-order */
-void DeleteCatTree(movie_t* root) {
-    if (root == guard) return;
-    DeleteCatTree(root->lc);
-    DeleteCatTree(root->rc);
-    free(root);
 }
 
 /*
@@ -217,7 +201,7 @@ int ChainInsertUser(user_t** head, int user_id) {
     /* Allocate and initialize the new node */
     user_t* new_user = (user_t*)malloc(sizeof(user_t));
     if (new_user == NULL) {
-        fprintf(stderr, "Malloc problem, ChainInsertUser().\n");
+        fprintf(stderr, "Malloc problem, ChainInsert.\n");
         return -1;
     }
     new_user->userID = user_id;
@@ -229,13 +213,12 @@ int ChainInsertUser(user_t** head, int user_id) {
 }
 
 /*
- * Scan the chain described by head and returns
+ * Scan the chain described by head and return
  * the address of the node with the userID given.
  * Otherwise, returns NULL. O(N)
 */
 user_t* ChainLookUpUser(user_t* head, int user_id) {
     user_t* tmp = head;
-
     /* Scan for user_id*/
     while ((tmp != NULL) && (tmp->userID != user_id)) {
         tmp = tmp->next;
@@ -245,7 +228,7 @@ user_t* ChainLookUpUser(user_t* head, int user_id) {
 }
 
 /*
- * Deletes the user with the user_id given by the chain described by head.
+ * Deletes the user with the user_id given from the chain described by head.
  * Returns 0 on success, otherwise -1. O(N)
 */
 int ChainDeleteUser(user_t** head, int user_id) {
@@ -253,7 +236,7 @@ int ChainDeleteUser(user_t** head, int user_id) {
     user_t* prev = NULL;
 
     /* Search for user_id*/
-    while((tmp != NULL) && (tmp->userID != user_id)) {
+    while(tmp != NULL && (tmp->userID != user_id)) {
         prev = tmp;
         tmp = tmp->next;
     }
@@ -261,7 +244,7 @@ int ChainDeleteUser(user_t** head, int user_id) {
     /* User was not found*/
     if (tmp == NULL) return -1;
 
-    /* tmp is the head */
+    /* tmp is the head*/
     if (tmp == (*head)) {
         (*head) = (*head)->next;
     }
@@ -289,37 +272,32 @@ void print_chain(user_t* head) {
  ******************************************************************************
 */
 
-/*
- * Returns the next greater prime number to K,
- * using the primes_g array[170].
-*/
+/* Returns the next greater prime number to K, using the primes_g array.*/
 int FindPrime(int K) {
     int i = 0;
-    while ((i < 170) && (primes_g[i] <= K)) i++;
+    while (i < 170 && (primes_g[i] <= K)) i++;
 
-    /*if i == 170 we take the largest element available. */
+    /*if i == 170 we must take the largest element. */
     return (i < 170) ? primes_g[i] : primes_g[169];
 }
 
 /*
  * - Allocates the user_hashtable_p and updates hashtable_size.
  * - Initializes the global variables hash_a, hash_b and hash_p
+ *   needed for HashFunc().
  * - Returns 0 on success, -1 otherwise.
  * 
  * load_f: Load factor needed to specify hashtable_size.
 */
 int UsersHashTableInit(int load_f) {
     int i = 0;
-
     /* We want the load factor = max_users/hashtable_size to be constant. */
     hashtable_size = (max_users / load_f);
-
-    if (hashtable_size == 0) hashtable_size = 1;
 
     /* Allocate and Initialize user's hashtable */
     user_hashtable_p = (user_t**) malloc(hashtable_size * sizeof(user_t*));
     if (user_hashtable_p == NULL) {
-        fprintf(stderr, "Malloc error in UsersHashTableInit()\n");
+        fprintf(stderr, "Malloc error in hash table\n");
         return -1;
     }
     for (i = 0; i < hashtable_size; ++i) {
@@ -327,9 +305,12 @@ int UsersHashTableInit(int load_f) {
     }
 
     /* Initialize global variables needed for hash function */
+    srand(100);
     hash_p = FindPrime(max_id);
     hash_a = 1 + rand() % hash_p; /* Random number in [1, p-1]*/
     hash_b = rand() % hash_p; /* Random number in [0, p]*/ 
+
+    printf("p = %d, a = %d, b = %d\n", hash_p, hash_a, hash_b);
 
     return 0;
 }
@@ -346,19 +327,35 @@ int HashFunc(int x, int a, int b, int p, int size) {
     return (((a*x + b) % p) % size);
 }
 
+int UserHashTableInsert(int user_id) {
+    int pos = HashFunc(user_id, hash_a, hash_b, hash_p, hashtable_size);
+    ChainInsertUser(&user_hashtable_p[pos], user_id);
+}
+
 /*
- * Returns a pointer to the user with id uid,
- * or NULL if no such a user exists.
+ * Scan all rows of hash table to find the user with user id uid.
+ * Returns a pointer to that user, or NULL if no such a user exists.
 */
 user_t* FindUser(int uid) {
     int i = 0;
     int pos = 0;
-    user_t* chain = NULL;
+    user_t* chain;
     user_t* user_found = NULL;
 
+    // for (i = 0; i < hashtable_size; ++i) {
+    //     chain = user_hashtable_p[i];
+    //     user_found = ChainLookUpUser(chain, uid);
+
+    //     if (user_found != NULL) return user_found;
+    // }
+
+    // while((user_found == NULL) && (i < hashtable_size)) {
+    //     chain = user_hashtable_p[i++];
+    //     user_found = ChainLookUpUser(chain, uid);
+    // }
+
     pos = HashFunc(uid, hash_a, hash_b, hash_p, hashtable_size);
-    chain = user_hashtable_p[pos];
-    user_found = ChainLookUpUser(chain, uid);
+    user_found = ChainLookUpUser(user_hashtable_p[pos], uid);
     
     return user_found;
 }
@@ -381,10 +378,6 @@ void InsertHistoryLeaf(userMovie_t** root, int movie_id, int cat, int rating) {
 
     /* Node containing the info of the new node*/
     userMovie_t* new_watched_film = (userMovie_t*)malloc(sizeof(userMovie_t));
-    if (new_watched_film == NULL) {
-        fprintf(stderr, "Malloc error InsertHistoryLeaf()\n");
-        return ;
-    }
     new_watched_film->movieID = movie_id;
     new_watched_film->category = cat;
     new_watched_film->score = rating;
@@ -456,10 +449,7 @@ void InsertHistoryLeaf(userMovie_t** root, int movie_id, int cat, int rating) {
     }
 }
 
-/*
- * Returns the leftmost node of a BST with root x.
- * If x does not have a LC, returns x.
- */
+/* Returns the leftmost node of a BST with root x. */
 userMovie_t* LeftMost(userMovie_t* x) {
     if (x == NULL) return NULL;
     
@@ -472,8 +462,7 @@ userMovie_t* LeftMost(userMovie_t* x) {
 
 /*
  * Given a leaf v of a doubly-linked leaf-oriented BST with root root,
- * returns a pointer to the successor leaf in in-order traversal,
- * otherwise NULL.
+ * Returns a pointer to the successor leaf in in-order traversal.
 */
 userMovie_t* Successor(userMovie_t* v, userMovie_t* root) {
     userMovie_t* tmp = v;
@@ -514,7 +503,7 @@ void DeleteWatchHistoryTree(userMovie_t* root) {
  * Prints the leaves of a leaf-oriented BST with root root.
  * in InOrder traversal (sorted).
  * - Format specifies how the output will be printed
- *   (W and P events have different format output).*/
+ *   (W and P have different format outputs).*/
 void PrintHistoryLeavesInOrder(userMovie_t* root, char format) {
     userMovie_t* lleft = LeftMost(root); /* Leftmost leaf */
     while(lleft != NULL) {
@@ -526,7 +515,7 @@ void PrintHistoryLeavesInOrder(userMovie_t* root, char format) {
     }
 }
 
-/* Returns the average rating of the watch history tree given.*/
+/* Return the average rating of the watch history tree given.*/
 float MeanHistoryRating(userMovie_t* root) {
     float ScoreSum = 0.;
     int counter = 0;
@@ -549,7 +538,7 @@ float MeanHistoryRating(userMovie_t* root) {
 
 /*
  * Returns the pointer to the movie with movie_id in category category.
- * If the movie doesn't exist, returns NULL.
+ * If not such a movie exists, returns NULL.
 */
 movie_t* FindMovie(int movie_id, int category) {
     if (category >= 6 || category < 0) {
@@ -569,7 +558,7 @@ movie_t* FindMovie(int movie_id, int category) {
     /* Restore sentinel movieID */
     sent_node->movieID = -1;
 
-    if (tmp != sent_node) { /* Movie Found */
+    if (tmp != sent_node) {
         return tmp;
     }
     else {
@@ -600,8 +589,7 @@ int NodesAboveScore(movie_t* root, int score) {
     /* Find average value */
     if (root->watchedCounter == 0) av = 0;
     else av = (float) (root->sumScore) / (root->watchedCounter);
-
-    /* If average value is greater or equal to score, increase counter. */
+    
     if (av >= score) s++;
     
     s += NodesAboveScore(root->rc, score);
@@ -611,7 +599,7 @@ int NodesAboveScore(movie_t* root, int score) {
 
 /*
  * Scans a category tree with root root and fills the filtering_array with
- * pointers to nodes with average score >= to the score given.
+ * pointers to nodes with average score >= to score given.
  * - idx is used to traverse the filtering array.
  * - In-order traversal.
 */
@@ -640,10 +628,6 @@ void swap(movie_t** a, movie_t** b) {
     *b = tmp;
 }
 
-/*
- * Given the filtering_array, returns the average score of the node at
- * position pos. If watchedCounter is 0, returns zero.
-*/
 float AvScore(movie_t** filtering_array, int pos) {
     float av = 0.;
     if (filtering_array[pos]->watchedCounter == 0) av = 0.;
@@ -678,78 +662,17 @@ void Heapify(movie_t* A[], int i, int size) {
 
 /* Turn a table of length size into a min-heap, with the root at the end. */
 void InitializeHeap(movie_t* A[], int size) {
-    int i;
-    for (i = 1; i < size; ++i) Heapify(A, 0, i + 1);
+    for (int i = 1; i < size; ++i) Heapify(A, 0, i + 1);
 }
 
 /* Heap Sort algorithm. O(nlog(n)) */
 void HeapSort(movie_t* A[], int size) {
-    int i = 0;
     InitializeHeap(A, size);        /* turn A into a heap */
 
-    for (i = 0; i < size - 1; ++i){
+    for (int i = 0; i < size - 1; ++i){
         swap(&A[i], &A[size - 1]);  /* Swap with the root */
         Heapify(A, i + 1, size);    /* Fix heap property */
     }
-}
-
-/*
- ******************************************************************************
- ******************************* FREE FUNCTIONS *******************************
- ******************************************************************************
-*/
-
-/* Deallocate a chain of users with head head and their watch history */
-void DeallocateChain(user_t* head) {
-    user_t* n = NULL;   /* next node */
-    user_t* tmp = head; /* used for scanning */
-    
-    while (tmp != NULL) {
-        n = tmp->next;      /* save next node */
-        
-        /* Delete watch History Tree */
-        DeleteWatchHistoryTree(tmp->history);
-        tmp->history = NULL;
-        free(tmp);
-
-        tmp = n;
-    }
-}
-
-/* Delete all the chains and then the table. */
-void DeleteUsersTable(void) {
-    int i = 0;
-    for (i = 0; i < hashtable_size; ++i) {
-        DeallocateChain(user_hashtable_p[i]);
-        user_hashtable_p[i] = NULL;
-    }
-    free(user_hashtable_p); /* Delete The table */
-    user_hashtable_p = NULL;
-    printf("User table deleted\n");
-}
-
-/* Delete Category Array and guard node */
-void DeleteCategoryArray(void) {
-    int i = 0;
-    for (i = 0; i < 6; ++i) {
-        /* Delete the category tree first */
-        DeleteCatTree(categoryArray[i]->movie);
-        free(categoryArray[i]);
-    }
-    printf("Category array deleted\n");
-
-    /* Deallocate guard node */
-    free(guard);
-    guard = NULL;
-}
-
-/* Free all dynamically allocated variables */
-void FreeAll(void) {
-    DeleteUsersTable();
-    DeleteCategoryArray();
-    DeleteNewReleasesTree(new_releases);
-
-    printf("Memory deallocation completed.\n");
 }
 
 /*
@@ -855,10 +778,8 @@ void FreeAll(void) {
  int distribute_movies(void){
     /* Save the number of movies for each category */
     int mov_cat_counters[6] = {0, 0, 0, 0, 0, 0};
-
     /* Array needed to fill arr_cat with fill_array() */
     int indices[6] = {0, 0, 0, 0, 0, 0};
-
     /* Array with 6 rows and each column equal to the number of movies for that category */
     new_movie_t*** arr_cat;
 
@@ -894,16 +815,6 @@ void FreeAll(void) {
     }
     new_releases = NULL;
 
-    /****************************************************************/
-    /* Deallocate helping memory used */
-    for (i = 0; i < 6; ++i) {
-        free(arr_cat[i]); /* Deallocate array of pointers */
-        arr_cat[i] = NULL;
-    }
-    free(arr_cat); /* Deallocate array of arrays of pointers*/
-    printf("Helping array deleted.\n");
-    /****************************************************************/
-    
     /* Printing */
     printf("D\nMovie Category Array:\n");
     for (i = 0; i < 6; ++i) {
@@ -977,13 +888,13 @@ void FreeAll(void) {
     float av = 0.0;           /* Average score */
     movie_t* movie_node;
 
-    /* Count movies with average_score >= score from every category. */
+    /* Count movies with average_score >= score */
     for (i = 0; i < 6; ++i) {
         numMovies += NodesAboveScore(categoryArray[i]->movie, score);
     }
 
     if (numMovies == 0) {
-        printf("There is no movie with average rating above %d\n", score);
+        printf("There is no movie with averaging rating above %d\n", score);
         return 1;
     }
 
@@ -999,7 +910,7 @@ void FreeAll(void) {
         FillFilteringArray(categoryArray[i]->movie, filtering_arr, &idx, score);
     }
 
-    /* Sort filtering_arr using Heapsort */
+    /* TODO: Heapsort */
     HeapSort(filtering_arr, numMovies);
 
     /* Printing */
@@ -1014,10 +925,6 @@ void FreeAll(void) {
         printf("<%d> <%.2f> ", movie_node->movieID, av);
     }
     printf("\nDONE\n");
-
-    /* Deallocate filtering_arr */
-    free(filtering_arr);
-    filtering_arr = NULL;
 
     return 1;
  }

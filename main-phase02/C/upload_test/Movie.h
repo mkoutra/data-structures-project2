@@ -101,8 +101,6 @@ extern int hash_p;
 int InitializeCatArray(void);
 int UsersHashTableInit(int load_f);
 
-/* Free all dynamically allocated memory */
-void FreeAll(void);
 
 /**
  * @brief Creates a new user.
